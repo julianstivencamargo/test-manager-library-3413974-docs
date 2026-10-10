@@ -108,6 +108,12 @@ De acuerdo con `api-contract.md`, toda respuesta de error HTTP (4xx y 5xx) manti
 - Suite de verificación: `tests/Feature/ApiContractTest.php` (7 pruebas de contrato completas, 57 aserciones).
 
 ### 5.1. Configuración de Entorno de Persistencia (PostgreSQL)
-- Para la correcta resolución en el entorno de desarrollo y orquestación Docker, la configuración en `.env` y `.env.example` del backend debe establecer inequívocamente `DB_CONNECTION=pgsql`, `DB_HOST=db`, `DB_PORT=5432`, `DB_DATABASE=manager_library`, `DB_USERNAME=library_user`, `DB_PASSWORD=library_secret` y `DB_SCHEMA=library`.
+- Para la correcta resolución en el entorno de desarrollo y orquestación Docker, la configuración en las variables de entorno del backend debe establecer inequívocamente `DB_CONNECTION=pgsql`, `DB_HOST=db`, `DB_PORT=5432`, `DB_DATABASE=manager_library`, `DB_USERNAME=library_user`, `DB_PASSWORD=library_secret` y `DB_SCHEMA=library`.
 - Esto garantiza que el runtime de Laravel utilice el driver `pgsql` y el search path `library` de PostgreSQL 16 provisto por el contenedor `manager-library-db`, evitando fallbacks no deseados al driver SQLite.
+
+### 5.2. Política Estricta de Seguridad para Archivos `.env` (RNF-Seguridad)
+- **Exclusión Absoluta del Control de Versiones:** Los archivos con valores de entorno reales o locales (`.env`, `.env.local`, `.env.*`) no deben evidenciarse ni versionarse bajo ninguna circunstancia en ninguno de los repositorios del proyecto.
+- **Configuración de `.gitignore`:** Todo repositorio del ecosistema debe mantener reglas explícitas en su `.gitignore` para ignorar `.env` y variantes locales.
+- **Plantillas Referenciales:** Únicamente se permite versionar `.env.example` en repositorios que lo requieran como plantilla ilustrativa sin secretos sensibles de producción (`APP_KEY` vacía), sirviendo exclusivamente como guía de despliegue.
+
 
