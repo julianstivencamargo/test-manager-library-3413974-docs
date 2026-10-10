@@ -106,3 +106,8 @@ De acuerdo con `api-contract.md`, toda respuesta de error HTTP (4xx y 5xx) manti
 ## 5. Arranque y Composición
 - Seeder `AdminUserSeeder` y comando `php artisan library:bootstrap-admin` leen `ADMIN_USERNAME` y `ADMIN_PASSWORD` desde variables de entorno y crean el administrador inicial si no existe.
 - Suite de verificación: `tests/Feature/ApiContractTest.php` (7 pruebas de contrato completas, 57 aserciones).
+
+### 5.1. Configuración de Entorno de Persistencia (PostgreSQL)
+- Para la correcta resolución en el entorno de desarrollo y orquestación Docker, la configuración en `.env` y `.env.example` del backend debe establecer inequívocamente `DB_CONNECTION=pgsql`, `DB_HOST=db`, `DB_PORT=5432`, `DB_DATABASE=manager_library`, `DB_USERNAME=library_user`, `DB_PASSWORD=library_secret` y `DB_SCHEMA=library`.
+- Esto garantiza que el runtime de Laravel utilice el driver `pgsql` y el search path `library` de PostgreSQL 16 provisto por el contenedor `manager-library-db`, evitando fallbacks no deseados al driver SQLite.
+
