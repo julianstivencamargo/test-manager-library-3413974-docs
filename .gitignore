@@ -1,0 +1,8 @@
+# Environment files
+.env
+.env.*
+*.env
+
+# Misc
+.DS_Store
+Thumbs.db
