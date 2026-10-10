@@ -115,5 +115,24 @@ De acuerdo con `api-contract.md`, toda respuesta de error HTTP (4xx y 5xx) manti
 - **Exclusión Absoluta del Control de Versiones:** Los archivos con valores de entorno reales o locales (`.env`, `.env.local`, `.env.*`) no deben evidenciarse ni versionarse bajo ninguna circunstancia en ninguno de los repositorios del proyecto.
 - **Configuración de `.gitignore`:** Todo repositorio del ecosistema debe mantener reglas explícitas en su `.gitignore` para ignorar `.env` y variantes locales.
 - **Plantillas Referenciales:** Únicamente se permite versionar `.env.example` en repositorios que lo requieran como plantilla ilustrativa sin secretos sensibles de producción (`APP_KEY` vacía), sirviendo exclusivamente como guía de despliegue.
+- **Exclusión de la imagen Docker:** El `.dockerignore` del backend excluye `.env` y sus variantes, de modo que ningún archivo de entorno local se copie dentro de la imagen construida.
+
+### 5.3. Arranque desde un clon limpio (T-01, T-17, T-20)
+Un clon recién descargado no contiene `.env`. El contenedor del backend usa un *entrypoint* (`docker/entrypoint.sh`) que, antes de ejecutar el comando principal:
+1. Si no existe `.env`, lo crea copiando `.env.example` (el archivo resultante queda ignorado por Git).
+2. Si `APP_KEY` está vacía, genera una clave aleatoria local con `php artisan key:generate`. La clave nunca se versiona (constitución, «Todo secreto viene del entorno»).
+3. Limpia la caché de configuración.
+
+El entrypoint **no ejecuta migraciones**: la base arranca sin tablas hasta que se corre `php artisan migrate` (evidencia de T-20).
+
+**Administrador inicial automático (T-17):** al terminar `php artisan migrate`, un listener del evento `MigrationsEnded`, registrado en el punto de composición (`AppServiceProvider`), ejecuta `AdminUserSeeder`. El seeder crea el administrador con `ADMIN_USERNAME` y `ADMIN_PASSWORD` del entorno si aún no existe. Si `ADMIN_PASSWORD` no está definida, no crea el usuario y emite una advertencia: no hay contraseña por defecto en el código. El comando `php artisan library:bootstrap-admin` sigue disponible para ejecutarlo manualmente.
+
+**Criterios de aceptación verificables:**
+- **CA-ARR-1:** En un clon limpio, tras `docker compose up -d`, `GET /health` responde `200 {"status":"ok"}`.
+- **CA-ARR-2:** Antes de migrar, el esquema `library` no contiene tablas.
+- **CA-ARR-3:** Tras `php artisan migrate`, sin ejecutar ningún sembrador de demostración, `POST /api/v1/auth/login` con las credenciales del entorno responde `200` con `access_token`.
+
+### 5.4. Aislamiento de las pruebas
+Las pruebas de contrato (`ApiContractTest`) usan el trait `DatabaseTransactions`: cada prueba se ejecuta dentro de una transacción que se revierte al terminar, y no deja registros en la base de datos de demostración. Comando de ejecución con el ecosistema levantado: `docker compose exec api php artisan test` (desde `infra`).
 
 

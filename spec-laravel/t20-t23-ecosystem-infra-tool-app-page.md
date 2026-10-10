@@ -23,6 +23,13 @@ El archivo `docker-compose.yml` orquesta los 4 servicios requeridos:
 - Red compartida tipo puente: `manager-library-net`.
 - Volumen persistente para la base de datos: `db_data`.
 
+### 2.3. Secuencia de Arranque (desde `infra`)
+1. `docker compose up -d --build`: levanta los cuatro servicios. La base arranca **sin tablas** (T-20).
+2. `docker compose exec api php artisan migrate`: crea el esquema `library` y las seis tablas. Al terminar aprovisiona automáticamente el administrador desde `ADMIN_USERNAME`/`ADMIN_PASSWORD` (T-17).
+3. (Opcional) Siembra de demostración (T-21), por cualquiera de las formas de §3.2.
+
+Ningún paso requiere crear un `.env` a mano: el entrypoint del backend lo deriva de `.env.example` y genera una `APP_KEY` local (ver `t07-t17-backend-api-core.md` §5.3).
+
 ---
 
 ## 3. Herramienta de Demostración (T-21 — `tool`)
@@ -36,7 +43,7 @@ Aprovisionar mediante llamadas HTTP a la API o mediante comando de consola un co
   - `GET /api/v1/reports/most-borrowed` (muestra filas consolidadas por libro y categoría congelada).
 
 ### 3.2. Formas de Ejecución
-- **Vía comando CLI en API:** `docker compose run --rm test php artisan library:demo-seed`
+- **Vía comando CLI en API (con el ecosistema levantado, desde `infra`):** `docker compose exec api php artisan library:demo-seed`
 - **Vía script HTTP:** `API_URL=http://localhost:8000/api/v1 php seed.php`
 
 ---
