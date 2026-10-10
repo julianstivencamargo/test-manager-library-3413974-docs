@@ -2,7 +2,7 @@
 
 ## 1. Identificador y Objetivo de la Tarea
 - **ID de la Tarea:** T-01 (según `spec-.net/tasks.md` y `spec-python/tasks.md`).
-- **Objetivo:** Inicializar el esqueleto del backend en PHP con Laravel dentro de `test-manager-library-3413974-api`, aplicando la estructura base para Arquitectura Hexagonal (puertos y adaptadores), desacoplando el dominio de Laravel y HTTP, configurando el contenedor Docker para ejecución autónoma y con dependencias instaladas en la construcción, y exponiendo el endpoint de salud funcional.
+- **Objetivo:** Inicializar el esqueleto del backend en PHP con Laravel dentro de `test-manager-library-3413974-api`, aplicando la estructura base para Arquitectura Hexagonal (puertos y adaptadores), desacoplando el dominio de Laravel y HTTP, configurando el contenedor Docker para ejecución autónoma y reproducible, y exponiendo el endpoint de salud funcional.
 
 ## 2. Requisitos de la Especificación Aplicables
 - **`tasks.md` T-01:** «Esqueleto del proyecto y `GET /health` | Evidencia: `GET /health` responde `{"status":"ok"}`; el contenedor arranca con un comando».
@@ -15,33 +15,25 @@
   - Convención base: prefijo `/api/v1` para la API, con soporte tanto en `/health` como en `/api/v1/health`.
   - Endpoint de salud: público, responde `{"status": "ok"}` con código HTTP 200.
 
-## 3. Decisiones Técnicas y Arquitectónicas
-- **Entorno de Ejecución y Contenedorización Autónoma:**
-  - El `Dockerfile` se diseña como multi-stage o con Composer integrado para instalar automáticamente las dependencias del proyecto (`composer install --no-dev --optimize-autoloader`) durante la construcción de la imagen (`docker build`).
-  - La imagen generada es autónoma y ejecutable desde un clon limpio sin requerir un directorio `vendor/` previo en el sistema host.
-- **Estructura de Capas Hexagonales y Autoloading PSR-4:**
-  - El namespace configurado en `composer.json` es `"Library\\": "src/"` (mapeando `src/Domain`, `src/Application`, `src/Adapters`, `src/Bootstrap`).
-  - Para asegurar la persistencia en Git de toda la estructura de carpetas de la arquitectura hexagonal, cada directorio base incorpora un archivo de anclaje (`.gitkeep` o interfaz base):
-    - `src/Domain/.gitkeep`
-    - `src/Application/Ports/Outbound/.gitkeep`
-    - `src/Application/Services/.gitkeep`
-    - `src/Adapters/Inbound/HTTP/Controllers/HealthCheckController.php`
-    - `src/Adapters/Outbound/Persistence/.gitkeep`
-    - `src/Adapters/Outbound/Security/.gitkeep`
-    - `src/Adapters/Outbound/Storage/.gitkeep`
-    - `src/Bootstrap/Composition/.gitkeep`
-- **Rutas de Salud:** Se mantienen `GET /health` y `GET /api/v1/health` retornando `{"status":"ok"}`.
+## 3. Decisiones Técnicas y Arquitectónicas (Docker-First y Aislamiento)
+- **Principio Docker-First estricto:** Cero instalaciones o dependencias en el host Windows. Toda instalación, compilación, ejecución y prueba corre exclusivamente en contenedores.
+- **Construcción y Dependencias (Dev + Runtime):**
+  - El `Dockerfile` instala tanto dependencias de ejecución como de desarrollo (`composer install --prefer-dist --optimize-autoloader`) para que herramientas de pruebas como PHPUnit estén disponibles dentro de la imagen.
+  - Se incluye un script/servicio para ejecutar la suite de pruebas PHPUnit (`docker compose run --rm test` o `docker compose run --rm api php artisan test`) de forma 100% reproducible y aislada.
+- **Preservación de `vendor` en `docker-compose.yml`:**
+  - Al montar volúmenes locales (`.:/app`) para desarrollo activo, se define un volumen anónimo dedicado para `/app/vendor`. Esto evita que un directorio vacío del host oculte el directorio `/app/vendor` generado durante la construcción de la imagen.
+- **Estructura Hexagonal y Autoloading:**
+  - Namespace `"Library\\": "src/"` en `composer.json`.
+  - Capas hexagonales explícitamente versionadas en Git (`Domain`, `Application`, `Adapters`, `Bootstrap`).
 
 ## 4. Archivos Previstos
 - `test-manager-library-3413974-docs/spec-laravel/t01-skeleton-health.md` (este documento).
-- `test-manager-library-3413974-api/Dockerfile`: Construcción con Composer y dependencias integradas en el contenedor.
-- `test-manager-library-3413974-api/docker-compose.yml`: Ejecución mediante un solo comando.
-- `test-manager-library-3413974-api/composer.json`: Con autoloading `"Library\\": "src/"` documentado fielmente.
-- Archivos `.gitkeep` en cada paquete de `src/` para garantizar la presencia de la estructura hexagonal en el repositorio.
+- `test-manager-library-3413974-api/Dockerfile`: Construcción con dependencias completas y autoload optimizado.
+- `test-manager-library-3413974-api/docker-compose.yml`: Montaje con volumen anónimo para `/app/vendor` y servicio `test` reproducible.
 - `test-manager-library-3413974-api/tests/Feature/HealthCheckTest.php`: Prueba automatizada de feature.
 
 ## 5. Criterios de Aceptación y Evidencias
 - **CA-T01-1:** La petición HTTP `GET /health` (y `GET /api/v1/health`) responde código 200 con JSON `{"status":"ok"}`.
-- **CA-T01-2:** El contenedor se construye y arranca con un solo comando desde un entorno sin `vendor/` local, instalando sus dependencias en la imagen Docker.
-- **CA-T01-3:** Las pruebas automatizadas pasan al 100%.
-- **CA-T01-4:** La estructura completa de carpetas hexagonal se encuentra versionada en el árbol de Git.
+- **CA-T01-2:** En un clon limpio sin `vendor/` local, `docker compose up` levanta y responde sin error de dependencias faltantes.
+- **CA-T01-3:** Las pruebas de PHPUnit se ejecutan dentro del contenedor (`docker compose run --rm api php artisan test` o similar) y pasan al 100%.
+- **CA-T01-4:** Estructura de carpetas hexagonal versionada y documentada.
